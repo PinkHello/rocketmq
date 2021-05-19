@@ -75,8 +75,10 @@ public class NamesrvController {
 
     public boolean initialize() {
 
+        //从配置文件以及一系列的配置中，捞取配置放入到 Config Manager
         this.kvConfigManager.load();
 
+        //创建 Netty 通信 Server
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
         this.remotingExecutor =
@@ -84,6 +86,7 @@ public class NamesrvController {
 
         this.registerProcessor();
 
+        //扫描broker & 移除不存活的broker   间隔 10s 执行
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -91,7 +94,7 @@ public class NamesrvController {
                 NamesrvController.this.routeInfoManager.scanNotActiveBroker();
             }
         }, 5, 10, TimeUnit.SECONDS);
-
+        //间隔 10 min 中, 打印配置
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

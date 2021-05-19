@@ -55,6 +55,7 @@ public class NamesrvStartup {
 
         try {
             NamesrvController controller = createNamesrvController(args);
+            //启动 NamesrvController
             start(controller);
             String tip = "The Name Server boot success. serializeType=" + RemotingCommand.getSerializeTypeConfigInThisServer();
             log.info(tip);
@@ -68,20 +69,32 @@ public class NamesrvStartup {
         return null;
     }
 
+    /**
+     * 初始化创建 NamesrvController
+     * @param args
+     * @return
+     * @throws IOException
+     * @throws JoranException
+     */
     public static NamesrvController createNamesrvController(String[] args) throws IOException, JoranException {
+        //系统变量拉取版本
         System.setProperty(RemotingCommand.REMOTING_VERSION_KEY, Integer.toString(MQVersion.CURRENT_VERSION));
         //PackageConflictDetect.detectFastjson();
 
         Options options = ServerUtil.buildCommandlineOptions(new Options());
+        //命令行参数
         commandLine = ServerUtil.parseCmdLine("mqnamesrv", args, buildCommandlineOptions(options), new PosixParser());
         if (null == commandLine) {
             System.exit(-1);
             return null;
         }
-
+        //创建 NamesrvConfig、NettyServerConfig
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+        //设置默认的 9876 端口
         nettyServerConfig.setListenPort(9876);
+
+        //命令行内有 'c' 指定配置文件的，有的话进行 merge 配置
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -98,6 +111,7 @@ public class NamesrvStartup {
             }
         }
 
+        //命令行执行 'p' 打印配置到控制台的
         if (commandLine.hasOption('p')) {
             InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_NAME);
             MixAll.printObjectProperties(console, namesrvConfig);
@@ -112,6 +126,7 @@ public class NamesrvStartup {
             System.exit(-2);
         }
 
+        //logback配置打印
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(lc);
@@ -131,12 +146,18 @@ public class NamesrvStartup {
         return controller;
     }
 
+    /**
+     * 启动 NamesrvController
+     * @param controller
+     * @return
+     * @throws Exception
+     */
     public static NamesrvController start(final NamesrvController controller) throws Exception {
 
         if (null == controller) {
             throw new IllegalArgumentException("NamesrvController is null");
         }
-
+        // NamesrvController 初始化
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();
