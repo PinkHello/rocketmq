@@ -69,12 +69,19 @@ public class RemotingCommand {
         }
     }
 
+    // 请求码操作
     private int code;
+    // 语言类型
     private LanguageCode language = LanguageCode.JAVA;
+    // 版本
     private int version = 0;
+    // requestId，标记请求响应是一个映射的
     private int opaque = requestId.getAndIncrement();
+    // 区分是普通RPC还是onewayRPC得标志
     private int flag = 0;
+    // 传输自定义文本信息
     private String remark;
+    // 请求自定义扩展信息
     private HashMap<String, String> extFields;
     private transient CommandCustomHeader customHeader;
 
@@ -85,6 +92,7 @@ public class RemotingCommand {
     protected RemotingCommand() {
     }
 
+    //创建 requestCommand
     public static RemotingCommand createRequestCommand(int code, CommandCustomHeader customHeader) {
         RemotingCommand cmd = new RemotingCommand();
         cmd.setCode(code);
@@ -93,6 +101,7 @@ public class RemotingCommand {
         return cmd;
     }
 
+    //设置程序版本
     private static void setCmdVersion(RemotingCommand cmd) {
         if (configVersion >= 0) {
             cmd.setVersion(configVersion);
@@ -136,11 +145,13 @@ public class RemotingCommand {
         return createResponseCommand(code, remark, null);
     }
 
+    //解码
     public static RemotingCommand decode(final byte[] array) {
         ByteBuffer byteBuffer = ByteBuffer.wrap(array);
         return decode(byteBuffer);
     }
 
+    //解码
     public static RemotingCommand decode(final ByteBuffer byteBuffer) {
         int length = byteBuffer.limit();
         int oriHeaderLen = byteBuffer.getInt();
@@ -166,6 +177,7 @@ public class RemotingCommand {
         return length & 0xFFFFFF;
     }
 
+    //消息头解码
     private static RemotingCommand headerDecode(byte[] headerData, SerializeType type) {
         switch (type) {
             case JSON:
@@ -208,6 +220,7 @@ public class RemotingCommand {
         return true;
     }
 
+    //设置协议类型
     public static byte[] markProtocolType(int source, SerializeType type) {
         byte[] result = new byte[4];
 
@@ -242,6 +255,7 @@ public class RemotingCommand {
             return null;
         }
 
+        //解码定制的扩展信息字段
         if (this.extFields != null) {
 
             Field[] fields = getClazzFields(classHeader);
@@ -325,6 +339,7 @@ public class RemotingCommand {
         return name;
     }
 
+    // 编码
     public ByteBuffer encode() {
         // 1> header length size
         int length = 4;
