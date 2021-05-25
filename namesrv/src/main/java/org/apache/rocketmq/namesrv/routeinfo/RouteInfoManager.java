@@ -48,11 +48,17 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
+    //读写锁
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    // Topic 和 队列信息
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+    // BrokerName 和 以 BrokerName 为单位的 Broker集合
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    // 集群 以及 属于该集群的 brokerName 列表
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // 存活的 broker 地址列表
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    // broker 对应的 filter server 列表
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -99,6 +105,7 @@ public class RouteInfoManager {
         return topicList.encode();
     }
 
+    //注册 Broker
     public RegisterBrokerResult registerBroker(
         final String clusterName,
         final String brokerAddr,
@@ -425,6 +432,7 @@ public class RouteInfoManager {
 
         return null;
     }
+
 
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();

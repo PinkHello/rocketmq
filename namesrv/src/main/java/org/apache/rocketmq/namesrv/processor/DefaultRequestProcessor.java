@@ -80,37 +80,38 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
 
 
         switch (request.getCode()) {
+
             case RequestCode.PUT_KV_CONFIG:
-                return this.putKVConfig(ctx, request);
+                return this.putKVConfig(ctx, request);  // KvConfigManager 存放配置并持久化
             case RequestCode.GET_KV_CONFIG:
-                return this.getKVConfig(ctx, request);
+                return this.getKVConfig(ctx, request);  // KvConfigManager 查询配置
             case RequestCode.DELETE_KV_CONFIG:
-                return this.deleteKVConfig(ctx, request);
+                return this.deleteKVConfig(ctx, request); // KvConfigManager 删除配置
             case RequestCode.QUERY_DATA_VERSION:
-                return queryBrokerTopicConfig(ctx, request);
+                return queryBrokerTopicConfig(ctx, request); // 查询数据的版本信息
             case RequestCode.REGISTER_BROKER:
                 Version brokerVersion = MQVersion.value2Version(request.getVersion());
                 if (brokerVersion.ordinal() >= MQVersion.Version.V3_0_11.ordinal()) {
-                    return this.registerBrokerWithFilterServer(ctx, request);
+                    return this.registerBrokerWithFilterServer(ctx, request); // 注册 broker
                 } else {
                     return this.registerBroker(ctx, request);
                 }
             case RequestCode.UNREGISTER_BROKER:
-                return this.unregisterBroker(ctx, request);
+                return this.unregisterBroker(ctx, request); // 解除注册 broker
             case RequestCode.GET_ROUTEINFO_BY_TOPIC:
-                return this.getRouteInfoByTopic(ctx, request);
+                return this.getRouteInfoByTopic(ctx, request); // 根据topic 获取 routeinfo
             case RequestCode.GET_BROKER_CLUSTER_INFO:
-                return this.getBrokerClusterInfo(ctx, request);
+                return this.getBrokerClusterInfo(ctx, request); //获取 broker 信息
             case RequestCode.WIPE_WRITE_PERM_OF_BROKER:
-                return this.wipeWritePermOfBroker(ctx, request);
+                return this.wipeWritePermOfBroker(ctx, request);    // 获取 offset 信息
             case RequestCode.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
-                return getAllTopicListFromNameserver(ctx, request);
+                return getAllTopicListFromNameserver(ctx, request); // 获取所有的 topic 列表
             case RequestCode.DELETE_TOPIC_IN_NAMESRV:
-                return deleteTopicInNamesrv(ctx, request);
+                return deleteTopicInNamesrv(ctx, request);      // 删除
             case RequestCode.GET_KVLIST_BY_NAMESPACE:
-                return this.getKVListByNamespace(ctx, request);
+                return this.getKVListByNamespace(ctx, request); // 获取 kvlist
             case RequestCode.GET_TOPICS_BY_CLUSTER:
-                return this.getTopicsByCluster(ctx, request);
+                return this.getTopicsByCluster(ctx, request); // 根据 cluster 获取 topic 列表
             case RequestCode.GET_SYSTEM_TOPIC_LIST_FROM_NS:
                 return this.getSystemTopicListFromNs(ctx, request);
             case RequestCode.GET_UNIT_TOPIC_LIST:
@@ -120,9 +121,9 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
             case RequestCode.GET_HAS_UNIT_SUB_UNUNIT_TOPIC_LIST:
                 return this.getHasUnitSubUnUnitTopicList(ctx, request);
             case RequestCode.UPDATE_NAMESRV_CONFIG:
-                return this.updateConfig(ctx, request);
+                return this.updateConfig(ctx, request); // 更新 namesrv 配置
             case RequestCode.GET_NAMESRV_CONFIG:
-                return this.getConfig(ctx, request);
+                return this.getConfig(ctx, request); // 获取 namesrv 配置
             default:
                 break;
         }

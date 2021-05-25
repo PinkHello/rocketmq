@@ -42,17 +42,26 @@ import org.apache.rocketmq.srvutil.FileWatchService;
 public class NamesrvController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
+    // name server 配置
     private final NamesrvConfig namesrvConfig;
 
+    // netty 配置
     private final NettyServerConfig nettyServerConfig;
 
+    // 单线程调度线程
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "NSScheduledThread"));
+
+    // 配置管理器
     private final KVConfigManager kvConfigManager;
+
+    // 路由管理器  broker
     private final RouteInfoManager routeInfoManager;
 
+    // netty server
     private RemotingServer remotingServer;
 
+    // 回调监听服务
     private BrokerHousekeepingService brokerHousekeepingService;
 
     private ExecutorService remotingExecutor;
@@ -63,9 +72,12 @@ public class NamesrvController {
     public NamesrvController(NamesrvConfig namesrvConfig, NettyServerConfig nettyServerConfig) {
         this.namesrvConfig = namesrvConfig;
         this.nettyServerConfig = nettyServerConfig;
+        // 创建KVConfig 管理器
         this.kvConfigManager = new KVConfigManager(this);
+        // 创建 RouteInfo 管理器
         this.routeInfoManager = new RouteInfoManager();
         this.brokerHousekeepingService = new BrokerHousekeepingService(this);
+        // 配置
         this.configuration = new Configuration(
             log,
             this.namesrvConfig, this.nettyServerConfig
@@ -81,6 +93,7 @@ public class NamesrvController {
         //创建 Netty 通信 Server
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
+        //创建线程池
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
