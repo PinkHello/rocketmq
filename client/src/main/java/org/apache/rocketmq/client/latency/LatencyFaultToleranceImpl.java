@@ -25,24 +25,43 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.rocketmq.client.common.ThreadLocalIndex;
 
 public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> {
+    /**
+     * 内部有个 faultItemTable(Map), 如果哪一次消息发送失败,
+     * 如果开启了故障延迟机制, 则构建一条 faultItem 记录,
+     * 以 BrokerName 为 Key 加入到这个 map 中,
+     * 那在某个时刻之前, 这个 broker 都是有问题的
+     *
+     * BrokerName 为 Key
+     *
+     */
     private final ConcurrentHashMap<String, FaultItem> faultItemTable = new ConcurrentHashMap<String, FaultItem>(16);
 
     private final ThreadLocalIndex whichItemWorst = new ThreadLocalIndex();
 
+    /**
+     * 更新故障记录 Table
+     * @param name
+     * @param currentLatency
+     * @param notAvailableDuration 不可用的时间间隔
+     */
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
+        // 1. 从 Table 中根据 BrokerName 找到故障记录.
         FaultItem old = this.faultItemTable.get(name);
         if (null == old) {
+            //2. 记录里面没有老值 创建新的
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
 
+            //如果有记录, 返回老的值, 没有的话返加入新的
             old = this.faultItemTable.putIfAbsent(name, faultItem);
             if (old != null) {
                 old.setCurrentLatency(currentLatency);
                 old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
             }
         } else {
+            // 3. 更新旧的故障记录数据
             old.setCurrentLatency(currentLatency);
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
@@ -96,9 +115,22 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
             '}';
     }
 
+    /**
+     * FaultItem 内部类
+     *
+     */
     class FaultItem implements Comparable<FaultItem> {
+        /**
+         * Broker Name
+         */
         private final String name;
+        /**
+         * 这次发送消息到出现异常的时间
+         */
         private volatile long currentLatency;
+        /**
+         * 在这个时间点以前，这个brokerName都会标记为故障
+         */
         private volatile long startTimestamp;
 
         public FaultItem(final String name) {

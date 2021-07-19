@@ -83,8 +83,9 @@ public class Validators {
         if (null == msg) {
             throw new MQClientException(ResponseCode.MESSAGE_ILLEGAL, "the message is null");
         }
-        // topic
+        //检查 msg 的 topic 基础信息( topic 名称不为空, topic 名称不包含非法字符, topic 名称长度<127)
         Validators.checkTopic(msg.getTopic());
+        //检查 topic 是否
         Validators.isNotAllowedSendTopic(msg.getTopic());
 
         // body
