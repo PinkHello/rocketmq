@@ -81,6 +81,12 @@ public class NamespaceUtil {
         return resourceWithNamespace;
     }
 
+    /**
+     * 拼装 namespace
+     * @param namespace
+     * @param resourceWithOutNamespace
+     * @return
+     */
     public static String wrapNamespace(String namespace, String resourceWithOutNamespace) {
         if (StringUtils.isEmpty(namespace) || StringUtils.isEmpty(resourceWithOutNamespace)) {
             return resourceWithOutNamespace;

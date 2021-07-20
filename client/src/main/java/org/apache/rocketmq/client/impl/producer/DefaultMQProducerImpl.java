@@ -178,10 +178,11 @@ public class DefaultMQProducerImpl implements MQProducerInner {
     public void start(final boolean startFactory) throws MQClientException {
         switch (this.serviceState) {
             case CREATE_JUST:
+                //第一次 new Producer 是 CreateJust 状态
                 this.serviceState = ServiceState.START_FAILED;
-
+                //检查配置
                 this.checkConfig();
-
+                //更改 instanceName 为 PID
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
