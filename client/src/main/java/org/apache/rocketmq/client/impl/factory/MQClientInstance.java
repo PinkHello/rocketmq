@@ -228,20 +228,37 @@ public class MQClientInstance {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
                     // If not specified,looking address from name server
+                    // 从 配置中找寻 NameServer 地址
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
                     // Start request-response channel
+                    // 开启 request-response 通道(代码上复用的通信组件 Netty 链接)
                     this.mQClientAPIImpl.start();
-                    // Start various schedule tasks
+                    // Start various schedule tasks  | 开启 很多的定时任务
+                    /**
+                     * 定时任务有:
+                     * 1. 每隔 2 分钟检测 NameServer 的变化
+                     * 2. 每隔 30 秒从 NameServer 获取 Topic 路由信息变化 和 新的 Topic 路由信息
+                     * 3. 每隔 30 秒清理 下线的 Broker
+                     * 4. 每隔 5 秒 持久化所有的消费进度
+                     * 5. 每隔 1 分钟 检车线程池大小是否需要调整
+                     */
                     this.startScheduledTask();
                     // Start pull service
+                    // 启动拉取消息的服务
                     this.pullMessageService.start();
                     // Start rebalance service
+                    // 启动 Rebalance 负载均衡服务
                     this.rebalanceService.start();
                     // Start push service
+                    /**
+                     * 这里又调用了 DefaultMQProducerImpl 的 start 方法, 因为传入的 false, 不会进入循环启动
+                     * 未报错的话是为了先将 DefaultMQProducerImpl 实例内的状态机状态 先变更为 ServiceState.RUNNING
+                     */
                     this.defaultMQProducer.getDefaultMQProducerImpl().start(false);
                     log.info("the client factory [{}] start OK", this.clientId);
+                    //启动完毕, 变更状态
                     this.serviceState = ServiceState.RUNNING;
                     break;
                 case START_FAILED:
@@ -931,7 +948,7 @@ public class MQClientInstance {
         if (null == group || null == producer) {
             return false;
         }
-
+        // 线程安全 的 Map  key 为 Producer Group Name,
         MQProducerInner prev = this.producerTable.putIfAbsent(group, producer);
         if (prev != null) {
             log.warn("the producer group[{}] exist already.", group);

@@ -177,21 +177,27 @@ public class DefaultMQProducerImpl implements MQProducerInner {
 
     public void start(final boolean startFactory) throws MQClientException {
         switch (this.serviceState) {
+            //第一次 默认 new Producer 是 CreateJust 状态
             case CREATE_JUST:
-                //第一次 new Producer 是 CreateJust 状态
+                // 完全启动后 置成 ServiceState.RUNNING
                 this.serviceState = ServiceState.START_FAILED;
-                //检查配置
+                //检查配置     group 是否填写、是不是默认的名字、长度是不是超出限制......
                 this.checkConfig();
                 //更改 instanceName 为 PID
                 if (!this.defaultMQProducer.getProducerGroup().equals(MixAll.CLIENT_INNER_PRODUCER_GROUP)) {
                     this.defaultMQProducer.changeInstanceNameToPID();
                 }
                 /**
+                 *   单例模式, 获取 MQClientInstance 对象, 客户端实例
                  *   MQClientManager JVM只有一个 静态常量
                  *   MQClientManager 内部维护着 clientId - MQClientInstance 的缓存 factoryTable
                  */
                 this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQProducer, rpcHook);
-                //
+                //将 Producer 注册到 Producer Group 中, 注册的 使用 producerTable 维护
+                ///**
+                // *  private final ConcurrentMap<String,MQProducerInner > producerTable
+                // *  = new ConcurrentHashMap<String, MQProducerInner>();
+                // */
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -199,12 +205,18 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                         null);
                 }
-
+                // 存储路由信息的对象  TopicPublishInfo 是路由信息
+                // this.defaultMQProducer.getCreateTopicKey() 获取 message 中的 topic, 但是在此，还没那样 message 进入。看具体的
+                // 是个默认的Key, 启动的时候为了测试和demo运行
+                //     /**
+                //     * Just for testing or demo program
+                //     */
+                //    private String createTopicKey = TopicValidator.AUTO_CREATE_TOPIC_KEY_TOPIC;
                 this.topicPublishInfoTable.put(this.defaultMQProducer.getCreateTopicKey(), new TopicPublishInfo());
 
                 //启动生产
                 if (startFactory) {
-                    //MQClientInstance 的 start
+                    //MQClientInstance 的 start   真正的启动核心类
                     mQClientFactory.start();
                 }
 
@@ -223,8 +235,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 break;
         }
 
+        //启动向所有的 broker 发送心态
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
 
+        // 每隔 3 秒 扫描过期的请求
         this.timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
