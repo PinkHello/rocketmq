@@ -242,7 +242,7 @@ public class MQClientInstance {
                      * 2. 每隔 30 秒从 NameServer 获取 Topic 路由信息变化 和 新的 Topic 路由信息
                      * 3. 每隔 30 秒清理 下线的 Broker
                      * 4. 每隔 5 秒 持久化所有的消费进度
-                     * 5. 每隔 1 分钟 检车线程池大小是否需要调整
+                     * 5. 每隔 1 分钟 检查线程池大小是否需要调整
                      */
                     this.startScheduledTask();
                     // Start pull service
