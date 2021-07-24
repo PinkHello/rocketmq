@@ -97,7 +97,7 @@ public class MQFaultStrategy {
             try {
                 //选择一个队列, topicInfo ThreadLocalIndex 都 + 1
                 int index = tpInfo.getSendWhichQueue().getAndIncrement();
-                //与队列的长度取模, 根据最后的 pos 取一个队列
+                //与队列的长度取模, 根据最后的 pos 取一个队列   轮询找到一个低延迟的Queue
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
                     if (pos < 0)
@@ -130,7 +130,7 @@ public class MQFaultStrategy {
             //如果故障列表中没有可写的队列, 直接从Topic Publish Info中取一个
             return tpInfo.selectOneMessageQueue();
         }
-        // 如果没有开启故障延迟, 直接从 Topic Publish Info 通过取模的方式获取队列,
+        // 如果没有开启故障延迟, 直接从 Topic Publish Info 通过取模的方式获取队列, 直接走轮询模式
         // 如果LastBrokerName不为空，则需要过滤掉brokerName=lastBrokerName的队列
         return tpInfo.selectOneMessageQueue(lastBrokerName);
     }
