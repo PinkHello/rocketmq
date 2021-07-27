@@ -570,27 +570,32 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 log.info("the consumer [{}] start beginning. messageModel={}, isUnitMode={}", this.defaultMQPushConsumer.getConsumerGroup(),
                     this.defaultMQPushConsumer.getMessageModel(), this.defaultMQPushConsumer.isUnitMode());
                 this.serviceState = ServiceState.START_FAILED;
-
+                // 检查各个配置项是否合法( consumerGroup, AllocateMessageQueueStrategy, MessageModel)
                 this.checkConfig();
-
+                // 将当前的 defaultMQPushConsumer 中的订阅关心复制到 RebalanceImpl(负载均衡器，决定 Conumer 从哪些 Queue 中消费信息)
                 this.copySubscription();
-
+                // 集群模式的话, 将当前的 defaultMQPushConsumer 实例名称改为 PID
                 if (this.defaultMQPushConsumer.getMessageModel() == MessageModel.CLUSTERING) {
                     this.defaultMQPushConsumer.changeInstanceNameToPID();
                 }
-
+                // 实例化 MQClientInstance
                 this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQPushConsumer, this.rpcHook);
-
+                // 初始化 rebalance 变量
                 this.rebalanceImpl.setConsumerGroup(this.defaultMQPushConsumer.getConsumerGroup());
                 this.rebalanceImpl.setMessageModel(this.defaultMQPushConsumer.getMessageModel());
                 this.rebalanceImpl.setAllocateMessageQueueStrategy(this.defaultMQPushConsumer.getAllocateMessageQueueStrategy());
                 this.rebalanceImpl.setmQClientFactory(this.mQClientFactory);
 
+                // 初始化 PullAPIWrapper（长链接,  从 Broker 拉取消息，利用Listener执行消息消费逻辑）
                 this.pullAPIWrapper = new PullAPIWrapper(
                     mQClientFactory,
                     this.defaultMQPushConsumer.getConsumerGroup(), isUnitMode());
                 this.pullAPIWrapper.registerFilterMessageHook(filterMessageHookList);
 
+                // 构建 offsetStore消息进度存储对象
+                // 看下面的代码两种模式
+                // Local  存储在本地磁盘上,适用于 BROADCASTING
+                // Remote 存储在Broker上，适用于 CLUSTERING,
                 if (this.defaultMQPushConsumer.getOffsetStore() != null) {
                     this.offsetStore = this.defaultMQPushConsumer.getOffsetStore();
                 } else {
@@ -608,6 +613,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 }
                 this.offsetStore.load();
 
+                // 看是哪种消费模式
+                // 顺序消费 ，实力化 ConsumeMessageOrderlyService
+                // 普通消费 ，实力化 ConsumeMessageConcurrentlyService
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
                     this.consumeOrderly = true;
                     this.consumeMessageService =

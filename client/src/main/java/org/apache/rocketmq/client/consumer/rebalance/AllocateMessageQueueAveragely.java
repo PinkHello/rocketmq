@@ -29,9 +29,27 @@ import org.apache.rocketmq.common.message.MessageQueue;
 public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrategy {
     private final InternalLogger log = ClientLogger.getLog();
 
+
+    /**
+     *  分配的 算法
+     *                （mod=0）       （mod!=0）      无法都分配
+     *     4个queue   2个consumer     3个consumer     5个 consumer
+     *  ｜ queue[0] ｜ consumer[0] ｜ consumer[0] ｜  consumer[0] ｜
+     *  ｜ queue[1] ｜ consumer[1] ｜ consumer[0] ｜  consumer[1] ｜
+     *  ｜ queue[2] ｜ consumer[1] ｜ consumer[1] ｜  consumer[2] ｜
+     *  ｜ queue[3] ｜ consumer[1] ｜ consumer[2] ｜  consumer[3] ｜
+     * @param consumerGroup current consumer group
+     * @param currentCID current consumer id
+     * @param mqAll message queue set in current topic
+     * @param cidAll consumer set in current consumer group
+     * @return
+     */
     @Override
     public List<MessageQueue> allocate(String consumerGroup, String currentCID, List<MessageQueue> mqAll,
         List<String> cidAll) {
+        /**
+         * 参数校验
+         */
         if (currentCID == null || currentCID.length() < 1) {
             throw new IllegalArgumentException("currentCID is empty");
         }
@@ -50,13 +68,19 @@ public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrate
                 cidAll);
             return result;
         }
-
+        /**
+         * 通过 currentCID 获取是第几个 Consumer
+         */
         int index = cidAll.indexOf(currentCID);
+        // 取模 多少消息对了无法平均分配，假如 mqALl.size()=4, cidAll.size()=5, 即 4个 queue, 5 个 消费者
         int mod = mqAll.size() % cidAll.size();
+        // 平均分配数
         int averageSize =
             mqAll.size() <= cidAll.size() ? 1 : (mod > 0 && index < mod ? mqAll.size() / cidAll.size()
                 + 1 : mqAll.size() / cidAll.size());
+        // 取模 不为 0 的情况下 [0,mod) 平均分配, 否则从第 index
         int startIndex = (mod > 0 && index < mod) ? index * averageSize : index * averageSize + mod;
+        // 分配 队列的数量
         int range = Math.min(averageSize, mqAll.size() - startIndex);
         for (int i = 0; i < range; i++) {
             result.add(mqAll.get((startIndex + i) % mqAll.size()));

@@ -90,6 +90,7 @@ public class PullMessageService extends ServiceThread {
     public void run() {
         log.info(this.getServiceName() + " service started");
 
+        //pullMessageService会在获取PullRequest时一直阻塞在pullRequestQueue，直到rebalance将PullRequest放入此阻塞队列
         while (!this.isStopped()) {
             try {
                 PullRequest pullRequest = this.pullRequestQueue.take();
