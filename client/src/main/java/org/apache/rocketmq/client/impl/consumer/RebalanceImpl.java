@@ -260,6 +260,7 @@ public abstract class RebalanceImpl {
                 }
                 break;
             }
+            // 集群模式的话
             case CLUSTERING: {
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
                 // 根据 topic 和 消费组 得到所有的消费者客户端
@@ -278,6 +279,7 @@ public abstract class RebalanceImpl {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
 
+                    //排序 为了后面做取模运算
                     Collections.sort(mqAll);
                     Collections.sort(cidAll);
 
@@ -285,7 +287,15 @@ public abstract class RebalanceImpl {
 
                     List<MessageQueue> allocateResult = null;
                     try {
-                        //负载均衡，计算出本消费者应该去哪个MessageQueue拉取消息
+                        //负载均衡，计算出本消费者应该去哪个MessageQueue拉取消息。默认的是平均算法
+                        /**
+                         *                （mod=0）       （mod!=0）      无法都分配
+                         *     4个queue   2个consumer     3个consumer     5个 consumer
+                         *  ｜ queue[0] ｜ consumer[0] ｜ consumer[0] ｜  consumer[0] ｜
+                         *  ｜ queue[1] ｜ consumer[1] ｜ consumer[0] ｜  consumer[1] ｜
+                         *  ｜ queue[2] ｜ consumer[1] ｜ consumer[1] ｜  consumer[2] ｜
+                         *  ｜ queue[3] ｜ consumer[1] ｜ consumer[2] ｜  consumer[3] ｜
+                         */
                         allocateResult = strategy.allocate(
                             this.consumerGroup,
                             this.mQClientFactory.getClientId(),

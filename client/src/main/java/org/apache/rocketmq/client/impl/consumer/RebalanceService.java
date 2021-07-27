@@ -35,6 +35,9 @@ public class RebalanceService extends ServiceThread {
         this.mqClientFactory = mqClientFactory;
     }
 
+    /**
+     * 20000 每隔 20 s 做了一次负载均衡
+     */
     @Override
     public void run() {
         log.info(this.getServiceName() + " service started");
