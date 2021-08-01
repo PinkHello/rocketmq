@@ -381,6 +381,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 构造 PullRequest
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {
@@ -412,6 +413,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 转发 PullRequest
         this.dispatchPullRequest(pullRequestList);
 
         return changed;

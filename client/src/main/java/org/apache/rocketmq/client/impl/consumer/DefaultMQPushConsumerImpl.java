@@ -611,11 +611,12 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     }
                     this.defaultMQPushConsumer.setOffsetStore(this.offsetStore);
                 }
+                //加载消费进度
                 this.offsetStore.load();
 
                 // 看是哪种消费模式
-                // 顺序消费 ，实力化 ConsumeMessageOrderlyService
-                // 普通消费 ，实力化 ConsumeMessageConcurrentlyService
+                // 顺序消费 ，实例化 ConsumeMessageOrderlyService
+                // 普通消费 ，实例化 ConsumeMessageConcurrentlyService
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
                     this.consumeOrderly = true;
                     this.consumeMessageService =
@@ -625,9 +626,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     this.consumeMessageService =
                         new ConsumeMessageConcurrentlyService(this, (MessageListenerConcurrently) this.getMessageListenerInner());
                 }
-
+                //启动消息消费服务
                 this.consumeMessageService.start();
 
+                //注册 consumer
                 boolean registerOK = mQClientFactory.registerConsumer(this.defaultMQPushConsumer.getConsumerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -636,7 +638,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                         null);
                 }
-
+                //启动
                 mQClientFactory.start();
                 log.info("the consumer [{}] start OK.", this.defaultMQPushConsumer.getConsumerGroup());
                 this.serviceState = ServiceState.RUNNING;
@@ -651,10 +653,16 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             default:
                 break;
         }
-
+        /**
+         * 内部遍历订阅的Topic然后更新查看订阅的信息
+         * - 内部调用的 MQClientInstance#updateTopicRouteInfoFromNameServer 方法
+         */
         this.updateTopicSubscribeInfoWhenSubscriptionChanged();
+        // 检查 consumer 配置
         this.mQClientFactory.checkClientInBroker();
+        // 向每个 broker 发送心跳信息
         this.mQClientFactory.sendHeartbeatToAllBrokerWithLock();
+        // 立即触发一次 rebalance（内部 通过 rebalanceService#wakeup 触发唤醒一个 RebalanceService 线程触发）
         this.mQClientFactory.rebalanceImmediately();
     }
 

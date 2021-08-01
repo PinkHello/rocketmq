@@ -240,8 +240,8 @@ public class MQClientInstance {
                      * 定时任务有:
                      * 1. 每隔 2 分钟检测 NameServer 的变化
                      * 2. 每隔 30 秒从 NameServer 获取 Topic 路由信息变化 和 新的 Topic 路由信息
-                     * 3. 每隔 30 秒清理 下线的 Broker
-                     * 4. 每隔 5 秒 持久化所有的消费进度
+                     * 3. 每隔 30 秒清理 下线的 Broker  && 向所有的Broker发送心跳信息(包含了订阅关系等)
+                     * 4. 每隔 5 秒 持久化所有的消费进度(广播模式的话，存储到本地，集群的存储到 Broker)
                      * 5. 每隔 1 分钟 检查线程池大小是否需要调整
                      */
                     this.startScheduledTask();
@@ -296,6 +296,8 @@ public class MQClientInstance {
             }
         }, 10, this.clientConfig.getPollNameServerInterval(), TimeUnit.MILLISECONDS);
 
+
+        //每隔 30 秒清理 下线的 Broker  && 向所有的Broker发送心跳信息(包含了订阅关系等)
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -309,6 +311,7 @@ public class MQClientInstance {
             }
         }, 1000, this.clientConfig.getHeartbeatBrokerInterval(), TimeUnit.MILLISECONDS);
 
+        // 定时持久化 consumer 消费进度(广播模式的话，存储到本地，集群的存储到 Broker)
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -619,6 +622,20 @@ public class MQClientInstance {
         }
     }
 
+    /**
+     * 将从NameServer 获取的 TopicRouteData 和 topicRouteTable 中的 TopicRouteData 进行对比，
+     * 先通过 topicRouteDataIsChange 方法判断是否有变化，没有的话再通过 isNeedUpdateTopicRouteInfo 方法进一步对比
+     * 若 有变化 则更新 brokerAddrTable,
+     * - 遍历 producerTable 执行 updateTopicPublishInfo(topic, publishInfo)，
+     * - 遍历 consumerTable 执行 updateTopicPublishInfo(topic, subscribeInfo)
+     *
+     * 最后将 cloneTopicRouteData 更新到 topicRouteTable
+     *
+     * @param topic
+     * @param isDefault
+     * @param defaultMQProducer
+     * @return
+     */
     public boolean updateTopicRouteInfoFromNameServer(final String topic, boolean isDefault,
         DefaultMQProducer defaultMQProducer) {
         try {
