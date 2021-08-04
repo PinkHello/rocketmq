@@ -115,6 +115,10 @@ public class BrokerController {
     private final NettyServerConfig nettyServerConfig;
     private final NettyClientConfig nettyClientConfig;
     private final MessageStoreConfig messageStoreConfig;
+    /**
+     * 管理消费者的消费进度，主要通过一张Mao来缓存
+     * topic@group 为key 值的map Integer 为哪条消息队列 Long 表示该消息的偏移量
+     */
     private final ConsumerOffsetManager consumerOffsetManager;
     private final ConsumerManager consumerManager;
     private final ConsumerFilterManager consumerFilterManager;
@@ -146,6 +150,9 @@ public class BrokerController {
     private MessageStore messageStore;
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
+    /**
+     * 管理 Topic 和 消息对抗的信息，也是 Map 缓存
+     */
     private TopicConfigManager topicConfigManager;
     private ExecutorService sendMessageExecutor;
     private ExecutorService pullMessageExecutor;
@@ -231,6 +238,16 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+    /**
+     *
+     * 加载 .../store/config/topic.json
+     * 加载 .../store/config/consumerOffset.json
+     * 加载 .../store/config/subscriptionGroup.json
+     * 加载 .../store/config/consumerFilter.json
+     *
+     * @return
+     * @throws CloneNotSupportedException
+     */
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 
@@ -329,6 +346,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            // 注册 Processor
             this.registerProcessor();
 
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
